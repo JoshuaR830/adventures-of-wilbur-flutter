@@ -97,18 +97,6 @@ class _MyHomePageState extends State<MyHomePage> {
     String newTitle;
     String newDescription;
 
-    if (currentIndex == _postSelectedIndex){
-      _pages[currentIndex] = ListView(
-        children: <Widget>[
-          Image.network(imageUrl),
-          Text(title),
-          Text(description),
-        ],
-      );
-    return;
-  }
-
-
     var response = await http.get(url);
     var status = response.statusCode;
     print(status);
@@ -150,36 +138,28 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
   int _selectedIndex = 0;
-  int _pendingIndex = 0;
-  int _postSelectedIndex = 0;
 
   void _onItemTapped(int index) async {
     print(index);
 
-    _pendingIndex = index;
-
     setState(() {
       _selectedIndex = index;
-      _pages[index] = ListView(
-        children: <Widget>[
-          Text("Loading $index"),
-        ],
-      );
+      _pages[index] =
+        CircularProgressIndicator(
+          backgroundColor: Colors.blue[100],
+        );
     });
 
     if (index == 0) {
       await _getLatestImage(index);
-      _postSelectedIndex = 0;
     }
 
     if (index == 1) {
       await _getOrderedImage(index);
-      _postSelectedIndex = 1;
     }
 
     if (index == 2) {
       await _getRandomImage(index);
-      _postSelectedIndex = 2;
     }
   }
 
@@ -211,6 +191,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(widget.title),
       ),
@@ -240,7 +221,11 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ],
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (value) {
+          if(_selectedIndex != value) {
+            _onItemTapped(value);
+          }
+        },
         selectedItemColor: Colors.white,
       ),
       body: Center(
