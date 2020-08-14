@@ -7,6 +7,8 @@ void main() {
   runApp(MyApp());
 }
 
+var storySequence = 1;
+
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
@@ -32,7 +34,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   String imageUrl = 'https://adventures-of-wilbur-images.s3.eu-west-2.amazonaws.com/WP_20160601_20_38_09_Pro.jpg';
-  var storyItemNumber = 3;
+  var isVisible = true;
 
   String title = "";
   String description = "";
@@ -72,19 +74,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _getRandomImage(int currentIndex) async {
     final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
-    var url = '$_wilburApiGatewayBaseUrl?imageTime=random&storyItemNumber=1';
+    var url = '$_wilburApiGatewayBaseUrl?imageTime=random&storyItemNumber=$storySequence';
     await _getImage(url, currentIndex);
   }
 
   Future<void> _getOrderedImage(int currentIndex) async {
     final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
-    var url = '$_wilburApiGatewayBaseUrl?imageTime=ordered&storyItemNumber=2';
+    print("Sequence $storySequence");
+    var url = '$_wilburApiGatewayBaseUrl?imageTime=ordered&storyItemNumber=$storySequence';
+    storySequence ++;
     await _getImage(url, currentIndex);
   }
 
   Future<void> _getLatestImage(int currentIndex) async {
     final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
-    var url = '$_wilburApiGatewayBaseUrl?imageTime=latest&storyItemNumber=3';
+    var url = '$_wilburApiGatewayBaseUrl?imageTime=latest&storyItemNumber=$storySequence';
     await _getImage(url, currentIndex);
   }
 
@@ -92,6 +96,14 @@ class _MyHomePageState extends State<MyHomePage> {
   // Should take a parameter to indicate what sort of image we are looking for
   // Url should be passed in from another method
   Future<void> _getImage(String url, int currentIndex) async {
+
+    setState(() {
+      _pages[currentIndex] = CircularProgressIndicator(
+        backgroundColor: Colors.blue[100],
+      );
+      isVisible = false;
+    });
+
     print("Asked for current index: $currentIndex");
     String newImage;
     String newTitle;
@@ -112,6 +124,11 @@ class _MyHomePageState extends State<MyHomePage> {
         newImage = parsedResponse["ImageUrl"];
         newTitle = parsedResponse["Title"];
         newDescription = parsedResponse["Description"];
+        var itemCount = parsedResponse["NumberOfItems"];
+
+        if(storySequence > itemCount) {
+          storySequence = 1;
+        }
       });
     }
 
@@ -129,7 +146,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Text(newDescription),
         ],
       );
-
+      isVisible = true;
       imageUrl = newImage;
       title = newTitle;
       description = newDescription;
@@ -166,22 +183,28 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _floatingActionButton(int index) {
 
     if(index == 1) {
-      return FloatingActionButton(
-        onPressed: () async {
-          _getOrderedImage(index);
-        },
-        tooltip: 'Next',
-        child: Icon(Icons.navigate_next),
+      return Visibility(
+        child: FloatingActionButton(
+          onPressed: () async {
+            _getOrderedImage(index);
+          },
+          tooltip: 'Next',
+          child: Icon(Icons.navigate_next),
+        ),
+        visible: isVisible,
       );
     }
 
     if(index == 2) {
-      return FloatingActionButton(
-        onPressed: () async {
-          _getRandomImage(index);
-        },
-        tooltip: 'Randomize',
-        child: Icon(Icons.refresh),
+      return Visibility(
+        child: FloatingActionButton(
+          onPressed: () async {
+            _getRandomImage(index);
+          },
+          tooltip: 'Randomize',
+          child: Icon(Icons.refresh),
+        ),
+        visible: isVisible,
       );
     }
 
