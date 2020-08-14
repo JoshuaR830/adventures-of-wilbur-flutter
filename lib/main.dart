@@ -14,19 +14,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: "Wilbur's Adventures",
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blueGrey,
-        // This makes the visual density adapt to the platform that you run
-        // the app on. For desktop platforms, the controls will be smaller and
-        // closer together (more dense) than on mobile platforms.
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: MyHomePage(title: "Wilbur's Adventures"),
@@ -36,16 +24,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
@@ -56,22 +34,85 @@ class _MyHomePageState extends State<MyHomePage> {
   String imageUrl = 'https://adventures-of-wilbur-images.s3.eu-west-2.amazonaws.com/WP_20160601_20_38_09_Pro.jpg';
   var storyItemNumber = 3;
 
-  String title;
-  String description;
+  String title = "";
+  String description = "";
 
-  void _incrementCounter() async {
+  final _pages = <Widget>[];
 
+  @override
+  void initState() {
+   _pages.add(ListView(
+      children: <Widget>[
+         Image.network(imageUrl),
+         Text(title),
+         Text(description),
+       ],
+     ),
+   );
+
+   _pages.add(ListView(
+       children: <Widget>[
+         Image.network(imageUrl),
+         Text(title),
+         Text(description),
+       ],
+     ),
+   );
+
+   _pages.add(ListView(
+       children: <Widget>[
+         Image.network(imageUrl),
+         Text(title),
+         Text(description),
+       ],
+     ),
+   );
+   super.initState();
+  }
+
+  Future<void> _getRandomImage(int currentIndex) async {
     final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
-    var url = '$_wilburApiGatewayBaseUrl?storyItemNumber=$storyItemNumber';
+    var url = '$_wilburApiGatewayBaseUrl?imageTime=random&storyItemNumber=1';
+    await _getImage(url, currentIndex);
+  }
 
+  Future<void> _getOrderedImage(int currentIndex) async {
+    final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
+    var url = '$_wilburApiGatewayBaseUrl?imageTime=ordered&storyItemNumber=2';
+    await _getImage(url, currentIndex);
+  }
+
+  Future<void> _getLatestImage(int currentIndex) async {
+    final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
+    var url = '$_wilburApiGatewayBaseUrl?imageTime=latest&storyItemNumber=3';
+    await _getImage(url, currentIndex);
+  }
+
+  // This should do the shared stuff
+  // Should take a parameter to indicate what sort of image we are looking for
+  // Url should be passed in from another method
+  Future<void> _getImage(String url, int currentIndex) async {
+    print("Asked for current index: $currentIndex");
     String newImage;
     String newTitle;
     String newDescription;
+
+    if (currentIndex == _postSelectedIndex){
+      _pages[currentIndex] = ListView(
+        children: <Widget>[
+          Image.network(imageUrl),
+          Text(title),
+          Text(description),
+        ],
+      );
+    return;
+  }
 
 
     var response = await http.get(url);
     var status = response.statusCode;
     print(status);
+    print(response.body);
 
     if(status != 200) {
       newImage = 'https://adventures-of-wilbur-images.s3.eu-west-2.amazonaws.com/WP_20160601_20_38_09_Pro.jpg';
@@ -86,43 +127,126 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
 
+    if(currentIndex != _selectedIndex) {
+      print("Took too long $currentIndex");
+      return;
+    }
+
     setState(() {
+      print(_selectedIndex);
+      _pages[_selectedIndex] = ListView(
+        children: <Widget>[
+          Image.network(newImage),
+          Text(newTitle),
+          Text(newDescription),
+        ],
+      );
+
       imageUrl = newImage;
       title = newTitle;
       description = newDescription;
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: ListView(
-          children: <Widget>[
-            Image.network(imageUrl),
-            Text(title),
-            Text(description),
-          ],
-        )
-      ),
-      floatingActionButton: FloatingActionButton(
+
+  int _selectedIndex = 0;
+  int _pendingIndex = 0;
+  int _postSelectedIndex = 0;
+
+  void _onItemTapped(int index) async {
+    print(index);
+
+    _pendingIndex = index;
+
+    setState(() {
+      _selectedIndex = index;
+      _pages[index] = ListView(
+        children: <Widget>[
+          Text("Loading $index"),
+        ],
+      );
+    });
+
+    if (index == 0) {
+      await _getLatestImage(index);
+      _postSelectedIndex = 0;
+    }
+
+    if (index == 1) {
+      await _getOrderedImage(index);
+      _postSelectedIndex = 1;
+    }
+
+    if (index == 2) {
+      await _getRandomImage(index);
+      _postSelectedIndex = 2;
+    }
+  }
+
+  Widget _floatingActionButton(int index) {
+
+    if(index == 1) {
+      return FloatingActionButton(
         onPressed: () async {
-          _incrementCounter();
+          _getOrderedImage(index);
+        },
+        tooltip: 'Next',
+        child: Icon(Icons.navigate_next),
+      );
+    }
+
+    if(index == 2) {
+      return FloatingActionButton(
+        onPressed: () async {
+          _getRandomImage(index);
         },
         tooltip: 'Randomize',
         child: Icon(Icons.refresh),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      );
+    }
+
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.blueGrey,
+        items: <BottomNavigationBarItem> [
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.today,
+            ),
+            title: Text('Latest'),
+            backgroundColor: Colors.blue,
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.photo_library
+            ),
+            title: Text('Story'),
+            backgroundColor: Colors.blue,
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.mood
+            ),
+            title: Text('Random'),
+            backgroundColor: Colors.blue,
+          )
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.white,
+      ),
+      body: Center(
+        child: _pages.elementAt(_selectedIndex),
+      ),
+      floatingActionButton: _floatingActionButton(_selectedIndex),
     );
   }
 }
