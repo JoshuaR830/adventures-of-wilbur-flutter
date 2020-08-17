@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -33,8 +34,13 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String imageUrl = 'https://adventures-of-wilbur-images.s3.eu-west-2.amazonaws.com/WP_20160601_20_38_09_Pro.jpg';
+  int _selectedIndex = 0;
+  String imageUrl =
+      'https://adventures-of-wilbur-images.s3.eu-west-2.amazonaws.com/WP_20160601_20_38_09_Pro.jpg';
   var isVisible = true;
+  var isTextVisible = false;
+
+  var imageWidget;
 
   String title = "";
   String description = "";
@@ -43,52 +49,71 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-   _pages.add(ListView(
-      children: <Widget>[
-         Image.network(imageUrl),
-         Text(title),
-         Text(description),
-       ],
-     ),
-   );
+    _pages.add(
+      ListView(
+        children: <Widget>[
+          Image.network(imageUrl),
+          Text(title),
+          Text(description),
+        ],
+      ),
+    );
 
-   _pages.add(ListView(
-       children: <Widget>[
-         Image.network(imageUrl),
-         Text(title),
-         Text(description),
-       ],
-     ),
-   );
+    _pages.add(
+      ListView(
+        children: <Widget>[
+          Image.network(imageUrl),
+          Text(title),
+          Text(description),
+        ],
+      ),
+    );
 
-   _pages.add(ListView(
-       children: <Widget>[
-         Image.network(imageUrl),
-         Text(title),
-         Text(description),
-       ],
-     ),
-   );
-   super.initState();
+    _pages.add(
+      ListView(
+        children: <Widget>[
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.red,
+              image: DecorationImage(
+                image: AssetImage('/assets/images/placeholder-image.png'),
+              ),
+            ),
+            child: Image.network(imageUrl),
+          ),
+          Text(title),
+          Text(description),
+        ],
+      ),
+    );
+
+    _getLatestImage(_selectedIndex);
+
+    super.initState();
   }
 
   Future<void> _getRandomImage(int currentIndex) async {
-    final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
-    var url = '$_wilburApiGatewayBaseUrl?imageTime=random&storyItemNumber=$storySequence';
+    final _wilburApiGatewayBaseUrl =
+        'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
+    var url =
+        '$_wilburApiGatewayBaseUrl?imageTime=random&storyItemNumber=$storySequence';
     await _getImage(url, currentIndex);
   }
 
   Future<void> _getOrderedImage(int currentIndex) async {
-    final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
-    print("Sequence $storySequence");
-    var url = '$_wilburApiGatewayBaseUrl?imageTime=ordered&storyItemNumber=$storySequence';
-    storySequence ++;
+    final _wilburApiGatewayBaseUrl =
+        'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
+    var url =
+        '$_wilburApiGatewayBaseUrl?imageTime=ordered&storyItemNumber=$storySequence';
+    storySequence++;
     await _getImage(url, currentIndex);
   }
 
   Future<void> _getLatestImage(int currentIndex) async {
-    final _wilburApiGatewayBaseUrl = 'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
-    var url = '$_wilburApiGatewayBaseUrl?imageTime=latest&storyItemNumber=$storySequence';
+    final _wilburApiGatewayBaseUrl =
+        'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
+    var url =
+        '$_wilburApiGatewayBaseUrl?imageTime=latest&storyItemNumber=$storySequence';
     await _getImage(url, currentIndex);
   }
 
@@ -96,7 +121,6 @@ class _MyHomePageState extends State<MyHomePage> {
   // Should take a parameter to indicate what sort of image we are looking for
   // Url should be passed in from another method
   Future<void> _getImage(String url, int currentIndex) async {
-
     setState(() {
       _pages[currentIndex] = CircularProgressIndicator(
         backgroundColor: Colors.blue[100],
@@ -104,67 +128,137 @@ class _MyHomePageState extends State<MyHomePage> {
       isVisible = false;
     });
 
-    print("Asked for current index: $currentIndex");
     String newImage;
     String newTitle;
     String newDescription;
+    var newImageWidget;
 
-    var response = await http.get(url);
-    var status = response.statusCode;
-    print(status);
-    print(response.body);
+    try {
+      var response = await http.get(url);
 
-    if(status != 200) {
-      newImage = 'https://adventures-of-wilbur-images.s3.eu-west-2.amazonaws.com/WP_20160601_20_38_09_Pro.jpg';
-    } else {
-      await http.get(url)
-          .then((response) => response.body)
-          .then((responseImageUrl) {
-        var parsedResponse = json.decode(responseImageUrl);
-        newImage = parsedResponse["ImageUrl"];
-        newTitle = parsedResponse["Title"];
-        newDescription = parsedResponse["Description"];
-        var itemCount = parsedResponse["NumberOfItems"];
+      var status = response.statusCode;
 
-        if(storySequence > itemCount) {
-          storySequence = 1;
-        }
-      });
+      if (status != 200) {
+        newImage =
+            'https://adventures-of-wilbur-images.s3.eu-west-2.amazonaws.com/WP_20160601_20_38_09_Pro.jpg';
+      } else {
+        await http
+            .get(url)
+            .then((response) => response.body)
+            .then((responseImageUrl) {
+          var parsedResponse = json.decode(responseImageUrl);
+          newImage = parsedResponse["ImageUrl"];
+          newImageWidget = Image(image: NetworkImage(newImage));
+          newTitle = parsedResponse["Title"];
+          newDescription = parsedResponse["Description"];
+          var itemCount = parsedResponse["NumberOfItems"];
+
+          if (storySequence > itemCount) {
+            storySequence = 1;
+          }
+        });
+      }
+
+      if (currentIndex != _selectedIndex) {
+        return;
+      }
+    } catch (e) {
+      newImageWidget = Image(image: AssetImage('assets/images/placeholder-disaster-image.png'));
+      newTitle = "Network error";
+      newDescription = "Check your connection and try again";
     }
 
-    if(currentIndex != _selectedIndex) {
-      print("Took too long $currentIndex");
-      return;
-    }
 
     setState(() {
-      print(_selectedIndex);
-      _pages[_selectedIndex] = ListView(
-        children: <Widget>[
-          Image.network(newImage),
-          Text(newTitle),
-          Text(newDescription),
-        ],
-      );
       isVisible = true;
+      imageWidget =  newImageWidget;
       imageUrl = newImage;
       title = newTitle;
       description = newDescription;
+      _pages[_selectedIndex] = _setPageContent();
     });
   }
 
+  Stack _setPageContent() {
+    var sizeContext = MediaQuery.of(context);
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: <Widget>[
+        SizedBox(
+          height: sizeContext.size.height - kToolbarHeight - kBottomNavigationBarHeight - sizeContext.padding.top - sizeContext.padding.bottom,
+          width: sizeContext.size.width,
+          child: Center(
+            child: Container(
+              height: sizeContext.size.height - kToolbarHeight - kBottomNavigationBarHeight - sizeContext.padding.top - sizeContext.padding.bottom,
+              width: sizeContext.size.width,
+              decoration: BoxDecoration(
+                color: Colors.blueGrey[300],
+                image: DecorationImage(
+                  image: AssetImage('assets/images/placeholder-image.png'),
+                ),
+              ),
+              child: FittedBox(
+                child: imageWidget,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+        Visibility(
+          child: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: Color(0x99000000),
+                borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16))),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Center(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                      fontSize: 20
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    description,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          visible: isTextVisible,
+        ),
+      ],
+    );
+  }
 
-  int _selectedIndex = 0;
+  void _onShowInfo() {
+    setState(() {
+      isTextVisible = !isTextVisible;
+      _pages[_selectedIndex] = _setPageContent();
+    });
+  }
 
   void _onItemTapped(int index) async {
-    print(index);
-
     setState(() {
       _selectedIndex = index;
-      _pages[index] =
-        CircularProgressIndicator(
-          backgroundColor: Colors.blue[100],
-        );
+      _pages[index] = CircularProgressIndicator(
+        backgroundColor: Colors.blue[100],
+      );
     });
 
     if (index == 0) {
@@ -181,8 +275,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _floatingActionButton(int index) {
-
-    if(index == 1) {
+    if (index == 1) {
       return Visibility(
         child: FloatingActionButton(
           onPressed: () async {
@@ -195,7 +288,7 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     }
 
-    if(index == 2) {
+    if (index == 2) {
       return Visibility(
         child: FloatingActionButton(
           onPressed: () async {
@@ -216,11 +309,17 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        actions: [
+          IconButton(
+            icon: Icon(isTextVisible ? Icons.info : Icons.info_outline),
+            onPressed: _onShowInfo,
+          )
+        ],
         title: Text(widget.title),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.blueGrey,
-        items: <BottomNavigationBarItem> [
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(
               Icons.today,
@@ -229,23 +328,19 @@ class _MyHomePageState extends State<MyHomePage> {
             backgroundColor: Colors.blue,
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.photo_library
-            ),
+            icon: Icon(Icons.photo_library),
             title: Text('Story'),
             backgroundColor: Colors.blue,
           ),
           BottomNavigationBarItem(
-            icon: Icon(
-              Icons.mood
-            ),
+            icon: Icon(Icons.mood),
             title: Text('Random'),
             backgroundColor: Colors.blue,
           )
         ],
         currentIndex: _selectedIndex,
         onTap: (value) {
-          if(_selectedIndex != value) {
+          if (_selectedIndex != value) {
             _onItemTapped(value);
           }
         },
