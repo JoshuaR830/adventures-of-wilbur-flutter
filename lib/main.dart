@@ -100,12 +100,17 @@ class _MyHomePageState extends State<MyHomePage> {
     await _getImage(url, currentIndex);
   }
 
-  Future<void> _getOrderedImage(int currentIndex) async {
+  Future<void> _getOrderedImage(int currentIndex, bool shouldIncrement) async {
     final _wilburApiGatewayBaseUrl =
         'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
+
+    if (shouldIncrement){
+      storySequence++;
+    }
+
     var url =
         '$_wilburApiGatewayBaseUrl?imageTime=ordered&storyItemNumber=$storySequence';
-    storySequence++;
+
     await _getImage(url, currentIndex);
   }
 
@@ -253,33 +258,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void _onItemTapped(int index) async {
-    setState(() {
-      _selectedIndex = index;
-      _pages[index] = CircularProgressIndicator(
-        backgroundColor: Colors.blue[100],
-      );
-    });
-
-    if (index == 0) {
-      await _getLatestImage(index);
-    }
-
-    if (index == 1) {
-      await _getOrderedImage(index);
-    }
-
-    if (index == 2) {
-      await _getRandomImage(index);
-    }
-  }
-
   Widget _floatingActionButton(int index) {
     if (index == 1) {
       return Visibility(
         child: FloatingActionButton(
           onPressed: () async {
-            _getOrderedImage(index);
+            _getOrderedImage(index, true);
           },
           tooltip: 'Next',
           child: Icon(Icons.navigate_next),
@@ -302,6 +286,27 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     return null;
+  }
+
+  void _onItemTapped(int index) async {
+    setState(() {
+      _selectedIndex = index;
+      _pages[index] = CircularProgressIndicator(
+        backgroundColor: Colors.blue[100],
+      );
+    });
+
+    if (index == 0) {
+      await _getLatestImage(index);
+    }
+
+    if (index == 1) {
+      await _getOrderedImage(index, false);
+    }
+
+    if (index == 2) {
+      await _getRandomImage(index);
+    }
   }
 
   @override
