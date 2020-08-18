@@ -48,13 +48,11 @@ class _MyHomePageState extends State<MyHomePage> {
   final _pages = <Widget>[];
 
   @override
-  void initState() {
+  initState() {
+    _getLatestImage(_selectedIndex, false);
     _pages.add(
       ListView(
         children: <Widget>[
-          Image.network(imageUrl),
-          Text(title),
-          Text(description),
         ],
       ),
     );
@@ -87,8 +85,6 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
 
-    _getLatestImage(_selectedIndex);
-
     super.initState();
   }
 
@@ -97,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
         'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
     var url =
         '$_wilburApiGatewayBaseUrl?imageTime=random&storyItemNumber=$storySequence';
-    await _getImage(url, currentIndex);
+    await _getImage(url, currentIndex, true);
   }
 
   Future<void> _getOrderedImage(int currentIndex, bool shouldIncrement) async {
@@ -111,25 +107,60 @@ class _MyHomePageState extends State<MyHomePage> {
     var url =
         '$_wilburApiGatewayBaseUrl?imageTime=ordered&storyItemNumber=$storySequence';
 
-    await _getImage(url, currentIndex);
+    await _getImage(url, currentIndex, true);
   }
 
-  Future<void> _getLatestImage(int currentIndex) async {
+  Future<void> _getLatestImage(int currentIndex, bool shouldUpdateUi) async {
     final _wilburApiGatewayBaseUrl =
         'https://7rxf8z5z9h.execute-api.eu-west-2.amazonaws.com/v0/lambda';
     var url =
         '$_wilburApiGatewayBaseUrl?imageTime=latest&storyItemNumber=$storySequence';
-    await _getImage(url, currentIndex);
+
+    await _getImage(url, currentIndex, shouldUpdateUi);
+  }
+
+  Widget _setLoadingPage() {
+    print("Loading page");
+    var sizeContext = MediaQuery.of(context);
+    var height = sizeContext.size.height - kToolbarHeight - kBottomNavigationBarHeight - sizeContext.padding.top - sizeContext.padding.bottom;
+    return SizedBox(
+      height: height,
+      width: sizeContext.size.width,
+      child: Center(
+        child: Container(
+          height: height,
+          width: sizeContext.size.width,
+          decoration: BoxDecoration(
+            color: Colors.blueGrey[300],
+            image: DecorationImage(
+              image: AssetImage('assets/images/placeholder-image.png'),
+            ),
+          ),
+          child: Stack(
+            children: <Widget> [
+              Center(
+                child: Padding(
+                    padding: EdgeInsets.only(top: height - (height*0.5), right: 64, left: 64),
+                    child: LinearProgressIndicator(
+                      backgroundColor: Colors.blue[100],
+                    )
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // This should do the shared stuff
   // Should take a parameter to indicate what sort of image we are looking for
   // Url should be passed in from another method
-  Future<void> _getImage(String url, int currentIndex) async {
+  Future<void> _getImage(String url, int currentIndex, bool shouldUpdateUi) async {
     setState(() {
-      _pages[currentIndex] = CircularProgressIndicator(
-        backgroundColor: Colors.blue[100],
-      );
+      if(shouldUpdateUi) {
+        _pages[currentIndex] = _setLoadingPage();
+      }
       isVisible = false;
     });
 
@@ -180,11 +211,15 @@ class _MyHomePageState extends State<MyHomePage> {
       imageUrl = newImage;
       title = newTitle;
       description = newDescription;
+
+      print("Update content");
       _pages[_selectedIndex] = _setPageContent();
     });
   }
 
   Stack _setPageContent() {
+    print("Alright sir");
+
     var sizeContext = MediaQuery.of(context);
     return Stack(
       alignment: Alignment.topCenter,
@@ -297,7 +332,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     if (index == 0) {
-      await _getLatestImage(index);
+      await _getLatestImage(index, true);
     }
 
     if (index == 1) {
@@ -312,13 +347,17 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.blueGrey[300],
+
       appBar: AppBar(
         actions: [
-          IconButton(
-            icon: Icon(isTextVisible ? Icons.info : Icons.info_outline),
-            onPressed: _onShowInfo,
-          )
+          Visibility(
+            visible: isVisible,
+            child: IconButton(
+              icon: Icon(isTextVisible ? Icons.info : Icons.info_outline),
+              onPressed: _onShowInfo,
+            )
+          ),
         ],
         title: Text(widget.title),
       ),
